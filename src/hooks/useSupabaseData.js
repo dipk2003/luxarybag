@@ -1,100 +1,90 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/customSupabaseClient';
+import { useCallback, useEffect, useState } from 'react';
+import { productService } from '@/modules/catalog/productService';
+import { contentService } from '@/modules/content/contentService';
+import { storeService } from '@/modules/settings/storeService';
+import { categoryCatalog, storeSettingsFallback } from '@/modules/shared/constants/storeDefaults';
+import { getCategoryMedia } from '@/modules/shared/constants/premiumMedia';
+
+const buildCategories = (products) =>
+  categoryCatalog.map((category) => ({
+    ...category,
+    count:
+      category.slug === 'all'
+        ? products.length
+        : products.filter((product) => product.category === category.slug).length,
+    image: getCategoryMedia(category.slug),
+  }));
 
 export const useSupabaseData = () => {
   const [products, setProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [blogPosts, setBlogPosts] = useState([]);
   const [instagramSettings, setInstagramSettings] = useState(null);
+  const [storeSettings, setStoreSettings] = useState(storeSettingsFallback);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch Products
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('*')
-          .order('id', { ascending: false });
-        
-        if (productsError) throw productsError;
-        
-        // Fetch Reviews with Product names
-        const { data: reviewsData, error: reviewsError } = await supabase
-          .from('reviews')
-          .select('*, products(name)')
-          .order('created_at', { ascending: false });
+  const refresh = useCallback(async () => {
+    setLoading(true);
 
-        if (reviewsError) throw reviewsError;
+    const [settingsResult, productsResult, reviewsResult, blogPostsResult, instagramResult] =
+      await Promise.allSettled([
+        storeService.getSettings(),
+        productService.list(),
+        contentService.listReviews(),
+        contentService.listBlogPosts(),
+        contentService.getInstagramSettings(),
+      ]);
 
-        // Fetch Blog Posts
-        const { data: blogData, error: blogError } = await supabase
-          .from('blog_posts')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (blogError) throw blogError;
+    const nextSettings =
+      settingsResult.status === 'fulfilled'
+        ? settingsResult.value
+        : storeSettingsFallback;
+    const nextProducts =
+      productsResult.status === 'fulfilled' ? productsResult.value : [];
+    const nextReviews = reviewsResult.status === 'fulfilled' ? reviewsResult.value : [];
+    const nextBlogPosts =
+      blogPostsResult.status === 'fulfilled' ? blogPostsResult.value : [];
+    const nextInstagram =
+      instagramResult.status === 'fulfilled' ? instagramResult.value : null;
 
-        // Fetch Settings
-        const { data: settingsData } = await supabase
-          .from('instagram_settings')
-          .select('*')
-          .single();
+    const failures = [
+      settingsResult,
+      productsResult,
+      reviewsResult,
+      blogPostsResult,
+      instagramResult,
+    ]
+      .filter((result) => result.status === 'rejected')
+      .map((result) => result.reason?.message)
+      .filter(Boolean);
 
-        setProducts(productsData || []);
-        
-        // Transform reviews
-        const formattedReviews = (reviewsData || []).map(review => ({
-          ...review,
-          product: review.products?.name || 'Unknown Product',
-          date: new Date(review.created_at).toLocaleDateString()
-        }));
-        
-        setReviews(formattedReviews);
-        setBlogPosts(blogData || []);
-        setInstagramSettings(settingsData);
-
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    setStoreSettings(nextSettings);
+    setProducts(nextProducts);
+    setReviews(nextReviews);
+    setBlogPosts(nextBlogPosts);
+    setInstagramSettings(nextInstagram);
+    setError(failures.length > 0 ? failures.join(' | ') : null);
+    setLoading(false);
   }, []);
 
-  const faqs = [
-    {
-      question: 'Do you offer free delivery?',
-      answer: 'Yes! We offer free delivery across all of India for all orders.'
-    },
-    {
-      question: 'Is Cash on Delivery available?',
-      answer: 'Absolutely! COD is available on all orders. Pay when you receive your product.'
-    },
-    {
-      question: 'What is your return policy?',
-      answer: 'We offer easy 7-day returns. If you\'re not satisfied, simply return the product for a full refund.'
-    },
-    {
-      question: 'How do Custom Bags work?',
-      answer: 'Select your preferred color and enter the name/text you want embroidered on the product page. We will create it just for you!'
-    }
-  ];
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  // Updated Categories Logic
-  const categories = [
-    { name: 'All Bags', slug: 'all', count: products.length },
-    { name: 'Custom Bags', slug: 'custom-bags', count: products.filter(p => p.category === 'Custom Bags').length },
-    { name: 'Bridal', slug: 'bridal', count: products.filter(p => p.category === 'Bridal').length },
-    { name: 'Party', slug: 'party', count: products.filter(p => p.category === 'Party').length },
-    { name: 'Wedding', slug: 'wedding', count: products.filter(p => p.category === 'Wedding').length }
-  ];
+  const faqs = storeSettings.faqItems || storeSettingsFallback.faqItems;
+  const categories = buildCategories(products);
 
-  return { products, reviews, blogPosts, faqs, categories, instagramSettings, loading, error };
+  return {
+    products,
+    reviews,
+    blogPosts,
+    faqs,
+    categories,
+    instagramSettings,
+    storeSettings,
+    loading,
+    error,
+    refresh,
+  };
 };

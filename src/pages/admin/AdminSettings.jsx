@@ -1,110 +1,214 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import AdminShell from '@/components/admin/AdminShell';
 import { Button } from '@/components/ui/button';
-import { useMode } from '@/contexts/ModeContext';
 import { toast } from '@/components/ui/use-toast';
+import { useStore } from '@/contexts/ModeContext';
 
 const AdminSettings = () => {
-  const { mode, toggleMode } = useMode();
+  const { settings, updateSettings, mode } = useStore();
+  const [formData, setFormData] = useState(settings);
+  const [faqValue, setFaqValue] = useState('');
 
-  const handleSave = () => {
-    toast({
-      title: "Settings saved successfully!",
-      description: "Your changes have been applied."
-    });
+  useEffect(() => {
+    setFormData(settings);
+    setFaqValue(
+      (settings.faqItems || [])
+        .map((faq) => `${faq.question}::${faq.answer}`)
+        .join('\n'),
+    );
+  }, [settings]);
+
+  const handleSave = async () => {
+    try {
+      const nextSettings = await updateSettings({
+        ...formData,
+        faqItems: faqValue
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => {
+            const [question, answer] = line.split('::');
+            return { question: question?.trim(), answer: answer?.trim() };
+          })
+          .filter((item) => item.question && item.answer),
+      });
+      setFormData(nextSettings);
+      setFaqValue(
+        (nextSettings.faqItems || [])
+          .map((faq) => `${faq.question}::${faq.answer}`)
+          .join('\n'),
+      );
+      toast({
+        title: 'Store settings saved',
+      });
+    } catch {}
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link to="/admin">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold">Settings</h1>
+    <AdminShell
+      title="Store Settings"
+      description="Control brand copy, hero content, contact information, and storefront FAQs."
+    >
+      <div className="space-y-8">
+        <section className="rounded-[32px] border border-stone-100 bg-[#faf7f3] p-6">
+          <p className="text-xs uppercase tracking-[0.24em] text-stone-400">Store mode</p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {['STARTER', 'GROWTH'].map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFormData({ ...formData, mode: value })}
+                className={`rounded-[28px] border p-6 text-left transition ${
+                  (formData.mode || mode) === value
+                    ? 'border-stone-950 bg-stone-950 text-white'
+                    : 'border-stone-200 bg-white text-stone-700'
+                }`}
+              >
+                <p className="text-xs uppercase tracking-[0.24em] opacity-60">{value}</p>
+                <p className="mt-3 text-sm leading-7">
+                  {value === 'STARTER'
+                    ? 'WhatsApp-led catalog mode.'
+                    : 'Full cart and checkout mode.'}
+                </p>
+              </button>
+            ))}
           </div>
-        </div>
+        </section>
+
+        <section className="rounded-[32px] border border-stone-100 bg-[#faf7f3] p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <input
+              type="text"
+              value={formData.brandName || ''}
+              onChange={(event) =>
+                setFormData({ ...formData, brandName: event.target.value })
+              }
+              placeholder="Brand name"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              value={formData.brandShortName || ''}
+              onChange={(event) =>
+                setFormData({ ...formData, brandShortName: event.target.value })
+              }
+              placeholder="Short brand name"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              value={formData.contactEmail || ''}
+              onChange={(event) =>
+                setFormData({ ...formData, contactEmail: event.target.value })
+              }
+              placeholder="Contact email"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              value={formData.supportPhone || ''}
+              onChange={(event) =>
+                setFormData({ ...formData, supportPhone: event.target.value })
+              }
+              placeholder="Support phone"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              value={formData.whatsappNumber || ''}
+              onChange={(event) =>
+                setFormData({ ...formData, whatsappNumber: event.target.value })
+              }
+              placeholder="WhatsApp number"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              value={formData.instagramHandle || ''}
+              onChange={(event) =>
+                setFormData({ ...formData, instagramHandle: event.target.value })
+              }
+              placeholder="Instagram handle"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+          </div>
+          <textarea
+            rows="2"
+            value={formData.tagline || ''}
+            onChange={(event) =>
+              setFormData({ ...formData, tagline: event.target.value })
+            }
+            placeholder="Tagline"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+          <textarea
+            rows="2"
+            value={formData.announcementText || ''}
+            onChange={(event) =>
+              setFormData({ ...formData, announcementText: event.target.value })
+            }
+            placeholder="Announcement text"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+        </section>
+
+        <section className="rounded-[32px] border border-stone-100 bg-[#faf7f3] p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <input
+              type="text"
+              value={formData.heroKicker || ''}
+              onChange={(event) =>
+                setFormData({ ...formData, heroKicker: event.target.value })
+              }
+              placeholder="Hero kicker"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              value={formData.trustedBadgeText || ''}
+              onChange={(event) =>
+                setFormData({ ...formData, trustedBadgeText: event.target.value })
+              }
+              placeholder="Trust badge text"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+          </div>
+          <textarea
+            rows="2"
+            value={formData.heroTitle || ''}
+            onChange={(event) =>
+              setFormData({ ...formData, heroTitle: event.target.value })
+            }
+            placeholder="Hero title"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+          <textarea
+            rows="3"
+            value={formData.heroSubtitle || ''}
+            onChange={(event) =>
+              setFormData({ ...formData, heroSubtitle: event.target.value })
+            }
+            placeholder="Hero subtitle"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+          <textarea
+            rows="6"
+            value={faqValue}
+            onChange={(event) => setFaqValue(event.target.value)}
+            placeholder="FAQ entries as Question::Answer on each line"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+        </section>
+
+        <Button
+          type="button"
+          onClick={handleSave}
+          className="rounded-full bg-stone-950 text-white hover:bg-stone-800"
+        >
+          Save changes
+        </Button>
       </div>
-
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="bg-white rounded-xl shadow-sm p-8 mb-6">
-          <h2 className="text-xl font-bold mb-6">Store Mode</h2>
-          <div className="space-y-4">
-            <div 
-              onClick={() => toggleMode('STARTER')}
-              className={`border-2 rounded-xl p-6 cursor-pointer transition-all ${
-                mode === 'STARTER' ? 'border-yellow-600 bg-yellow-50' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-lg font-bold">STARTER Mode</span>
-                {mode === 'STARTER' && (
-                  <span className="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-semibold">Active</span>
-                )}
-              </div>
-              <p className="text-gray-600">
-                WhatsApp-first catalog. Display products with WhatsApp inquiry button. Perfect for starting out.
-              </p>
-            </div>
-
-            <div 
-              onClick={() => toggleMode('GROWTH')}
-              className={`border-2 rounded-xl p-6 cursor-pointer transition-all ${
-                mode === 'GROWTH' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-lg font-bold">GROWTH Mode</span>
-                {mode === 'GROWTH' && (
-                  <span className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-semibold">Active</span>
-                )}
-              </div>
-              <p className="text-gray-600">
-                Full ecommerce with shopping cart, checkout, and payment processing. Scale your business.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-8">
-          <h2 className="text-xl font-bold mb-6">Store Information</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2">Store Name</label>
-              <input
-                type="text"
-                defaultValue="LuxeBag"
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">WhatsApp Number</label>
-              <input
-                type="tel"
-                defaultValue="+91 98765 43210"
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">Email</label>
-              <input
-                type="email"
-                defaultValue="info@luxebag.com"
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
-              />
-            </div>
-            <Button onClick={handleSave} className="bg-yellow-600 hover:bg-yellow-700">
-              Save Changes
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    </AdminShell>
   );
 };
 

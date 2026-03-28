@@ -3,19 +3,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Search, ShoppingBag, Heart, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/contexts/CartContext';
-import { useMode } from '@/contexts/ModeContext';
+import { useStore } from '@/contexts/ModeContext';
 import { Button } from '@/components/ui/button';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { cartCount } = useCart();
-  const { isGrowthMode } = useMode();
+  const { isGrowthMode, settings } = useStore();
   const navigate = useNavigate();
+
+  const brandShortName = settings.brandShortName || settings.brandName || 'LuxeBag';
+  const suffix = settings.brandName?.startsWith(brandShortName)
+    ? settings.brandName.slice(brandShortName.length).trim()
+    : '';
 
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Shop All', href: '/shop' },
-    { name: 'Custom Bags', href: '/category/custom-bags', special: true }, // Changed from Potlis to Custom Bags
+    { name: 'Custom Bags', href: '/category/custom-bags', special: true },
     { name: 'Bridal Collection', href: '/category/bridal' },
     { name: 'Party Wear', href: '/category/party' },
   ];
@@ -24,7 +29,6 @@ const Header = () => {
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm transition-all duration-300">
       <nav className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
-          {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden p-2 hover:bg-gray-50 rounded-lg transition-colors"
@@ -33,16 +37,14 @@ const Header = () => {
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
 
-          {/* Logo */}
           <Link to="/" className="flex items-center flex-col md:flex-row md:gap-2 group">
             <span className="text-xl md:text-2xl font-bold tracking-tight uppercase relative">
-              LuxeBag 
-              <span className="text-yellow-600"> by Raiya</span>
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-yellow-600 transition-all duration-300 group-hover:w-full"></span>
+              {brandShortName}
+              {suffix ? <span className="text-yellow-600"> {suffix}</span> : null}
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-yellow-600 transition-all duration-300 group-hover:w-full" />
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {navigation.map((item) => (
               <Link
@@ -53,30 +55,30 @@ const Header = () => {
                 }`}
               >
                 {item.name}
-                <span className={`absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full ${
-                  item.special ? 'bg-yellow-700' : 'bg-yellow-600'
-                }`} />
+                <span
+                  className={`absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full ${
+                    item.special ? 'bg-yellow-700' : 'bg-yellow-600'
+                  }`}
+                />
               </Link>
             ))}
           </div>
 
-          {/* Right Icons */}
           <div className="flex items-center space-x-2 md:space-x-4">
-            <motion.button 
+            <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate('/shop')}
-              className="p-2 hover:bg-gray-50 rounded-full transition-colors" 
+              className="p-2 hover:bg-gray-50 rounded-full transition-colors"
               aria-label="Search"
             >
               <Search className="w-5 h-5 text-gray-700" />
             </motion.button>
-            
-            {/* Wishlist Icon Placeholder for future */}
-             <motion.button 
+
+            <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              className="hidden md:block p-2 hover:bg-gray-50 rounded-full transition-colors" 
+              className="hidden md:block p-2 hover:bg-gray-50 rounded-full transition-colors"
               aria-label="Wishlist"
             >
               <Heart className="w-5 h-5 text-gray-700" />
@@ -84,14 +86,14 @@ const Header = () => {
 
             {isGrowthMode && (
               <Link to="/checkout">
-                <motion.div 
+                <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
                   className="relative p-2 hover:bg-gray-50 rounded-full transition-colors"
                 >
                   <ShoppingBag className="w-5 h-5 text-gray-700" />
                   {cartCount > 0 && (
-                    <motion.span 
+                    <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       className="absolute -top-1 -right-1 bg-yellow-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold"
@@ -102,16 +104,15 @@ const Header = () => {
                 </motion.div>
               </Link>
             )}
-            
+
             <Link to="/contact" className="hidden md:block">
-               <Button size="sm" variant="outline" className="border-yellow-600 text-yellow-700 hover:bg-yellow-50">
-                 Contact
-               </Button>
+              <Button size="sm" variant="outline" className="border-yellow-600 text-yellow-700 hover:bg-yellow-50">
+                Contact
+              </Button>
             </Link>
           </div>
         </div>
 
-        {/* Mobile Menu */}
         <AnimatePresence>
           {isMenuOpen && (
             <motion.div
@@ -131,17 +132,17 @@ const Header = () => {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                       {item.name}
-                       <ChevronDown className="-rotate-90 w-4 h-4 text-gray-400" />
+                      {item.name}
+                      <ChevronDown className="-rotate-90 w-4 h-4 text-gray-400" />
                     </div>
                   </Link>
                 ))}
-                <Link 
-                   to="/contact"
-                   onClick={() => setIsMenuOpen(false)}
-                   className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                <Link
+                  to="/contact"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                 >
-                   Contact Us
+                  Contact Us
                 </Link>
               </div>
             </motion.div>

@@ -10,23 +10,26 @@ const ReviewsPage = () => {
   const { reviews, loading } = useSupabaseData();
 
   if (loading) {
-     return (
-       <div className="min-h-screen flex items-center justify-center">
-         <Loader2 className="w-8 h-8 animate-spin text-yellow-600" />
-       </div>
-     );
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-yellow-600" />
+      </div>
+    );
   }
 
   return (
     <>
       <Helmet>
         <title>Customer Reviews - LuxeBag</title>
-        <meta name="description" content="Read what our customers say about our luxury bags. Verified reviews from real customers." />
+        <meta
+          name="description"
+          content="Read what our customers say about our luxury bags. Verified reviews from real customers."
+        />
       </Helmet>
 
       <div className="min-h-screen">
         <Header />
-        
+
         <div className="container mx-auto px-4 py-12">
           <h1 className="text-3xl md:text-4xl font-bold mb-4">Customer Reviews</h1>
           <p className="text-gray-600 mb-12">Trusted by thousands of happy customers</p>

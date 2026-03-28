@@ -21,7 +21,10 @@ const BlogPage = () => {
     <>
       <Helmet>
         <title>Blog - Style Guide & Fashion Tips | LuxeBag</title>
-        <meta name="description" content="Explore luxury bag styling tips, fashion trends, and care guides from LuxeBag experts." />
+        <meta
+          name="description"
+          content="Explore luxury bag styling tips, fashion trends, and care guides from LuxeBag experts."
+        />
       </Helmet>
 
       <div className="min-h-screen">
@@ -38,24 +41,26 @@ const BlogPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-               {blogPosts.map(post => (
-                  <Link to={`/blog/${post.slug}`} key={post.id} className="block group">
-                     <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                        <div className="h-48 bg-gray-200 overflow-hidden">
-                           {post.featured_image ? (
-                              <img src={post.featured_image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                           ) : (
-                              <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">No Image</div>
-                           )}
-                        </div>
-                        <div className="p-6">
-                           <h2 className="text-xl font-bold mb-2 group-hover:text-yellow-600 transition-colors">{post.title}</h2>
-                           <p className="text-gray-600 line-clamp-3">{post.meta_description || "Read more about this topic..."}</p>
-                           <span className="text-yellow-600 font-semibold mt-4 inline-block">Read More</span>
-                        </div>
-                     </div>
-                  </Link>
-               ))}
+              {blogPosts.map((post) => (
+                <Link to={`/blog/${post.slug}`} key={post.id} className="block group">
+                  <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div className="h-48 bg-gray-200 overflow-hidden">
+                      {post.featured_image ? (
+                        <img src={post.featured_image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      ) : post.featuredImage ? (
+                        <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">No Image</div>
+                      )}
+                    </div>
+                    <div className="p-6">
+                      <h2 className="text-xl font-bold mb-2 group-hover:text-yellow-600 transition-colors">{post.title}</h2>
+                      <p className="text-gray-600 line-clamp-3">{post.meta_description || post.metaDescription || 'Read more about this topic...'}</p>
+                      <span className="text-yellow-600 font-semibold mt-4 inline-block">Read More</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
         </div>

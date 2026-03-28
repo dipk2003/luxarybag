@@ -1,108 +1,116 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Download, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Download, Loader2 } from 'lucide-react';
+import AdminShell from '@/components/admin/AdminShell';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { leadService } from '@/modules/marketing/leadService';
+import { formatDate } from '@/modules/shared/utils/formatters';
 
 const AdminLeads = () => {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchLeads();
+    let active = true;
+
+    const loadLeads = async () => {
+      try {
+        const data = await leadService.listLeads();
+        if (active) {
+          setLeads(data);
+        }
+      } catch (error) {
+        toast({
+          title: 'Unable to load leads',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadLeads();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const fetchLeads = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
-    if (error) {
-      toast({ title: "Error fetching leads", description: error.message, variant: "destructive" });
-    } else {
-      setLeads(data);
-    }
-    setLoading(false);
-  };
-
   const handleExport = () => {
-    // Simple CSV export logic
-    const headers = ['Name', 'Email', 'Source', 'Date'];
-    const csvContent = [
-        headers.join(','),
-        ...leads.map(lead => [lead.name, lead.email, lead.source, new Date(lead.created_at).toLocaleDateString()].join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const headers = ['Name', 'Email', 'Source', 'Discount', 'Created'];
+    const rows = leads.map((lead) => [
+      lead.name,
+      lead.email,
+      lead.source,
+      lead.discount || '',
+      formatDate(lead.created_at),
+    ]);
+    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'leads_export.csv');
+    link.setAttribute('download', 'luxebag-leads.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/admin">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
-              <h1 className="text-2xl font-bold">Lead Captures</h1>
-            </div>
-            <Button onClick={handleExport} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
-          </div>
+    <AdminShell
+      title="Leads"
+      description="Captured emails from the popup, campaigns, and other lead magnets."
+      action={
+        <Button
+          type="button"
+          onClick={handleExport}
+          className="rounded-full bg-stone-950 text-white hover:bg-stone-800"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Export CSV
+        </Button>
+      }
+    >
+      {loading ? (
+        <div className="flex justify-center p-20">
+          <Loader2 className="w-8 h-8 animate-spin text-stone-900" />
         </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        {loading ? (
-           <div className="flex justify-center p-12"><Loader2 className="animate-spin" /></div>
-        ) : leads.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-            <p className="text-gray-500">No leads captured yet</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+      ) : leads.length > 0 ? (
+        <div className="overflow-hidden rounded-[32px] border border-stone-100">
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white text-sm">
+              <thead className="bg-[#faf7f3] text-left text-stone-500">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Source</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Date</th>
+                  <th className="px-6 py-4 font-medium">Name</th>
+                  <th className="px-6 py-4 font-medium">Email</th>
+                  <th className="px-6 py-4 font-medium">Source</th>
+                  <th className="px-6 py-4 font-medium">Discount</th>
+                  <th className="px-6 py-4 font-medium">Created</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-stone-100">
                 {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-semibold">{lead.name}</td>
-                    <td className="px-6 py-4 text-gray-600">{lead.email}</td>
-                    <td className="px-6 py-4">
-                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
-                        {lead.source}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {new Date(lead.created_at).toLocaleDateString()}
-                    </td>
+                  <tr key={lead.id}>
+                    <td className="px-6 py-4 font-semibold text-stone-950">{lead.name}</td>
+                    <td className="px-6 py-4 text-stone-600">{lead.email}</td>
+                    <td className="px-6 py-4 text-stone-600">{lead.source}</td>
+                    <td className="px-6 py-4 text-stone-600">{lead.discount || '-'}</td>
+                    <td className="px-6 py-4 text-stone-500">{formatDate(lead.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      ) : (
+        <div className="rounded-[32px] border border-dashed border-stone-300 bg-[#faf7f3] p-12 text-center text-sm text-stone-500">
+          No leads captured yet.
+        </div>
+      )}
+    </AdminShell>
   );
 };
 

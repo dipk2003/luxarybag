@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingBag, Search, User, Menu, Star } from 'lucide-react';
+import { Home, ShoppingBag, Search, Menu, Star } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useMode } from '@/contexts/ModeContext';
 

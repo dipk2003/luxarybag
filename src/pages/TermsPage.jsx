@@ -8,7 +8,10 @@ const TermsPage = () => {
     <>
       <Helmet>
         <title>Terms & Conditions - LuxeBag</title>
-        <meta name="description" content="Read LuxeBag's terms and conditions for using our website and purchasing products." />
+        <meta
+          name="description"
+          content="Read LuxeBag's terms and conditions for using our website and purchasing products."
+        />
       </Helmet>
 
       <div className="min-h-screen">
@@ -17,14 +20,14 @@ const TermsPage = () => {
         <div className="container mx-auto px-4 py-12">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-3xl md:text-4xl font-bold mb-8">Terms & Conditions</h1>
-            
-            <div className="prose prose-lg max-w-none">
+
+            <div className="max-w-none">
               <p className="text-gray-600 mb-8">Last updated: December 14, 2025</p>
 
               <section className="mb-8">
                 <h2 className="text-2xl font-bold mb-4">1. Acceptance of Terms</h2>
                 <p className="text-gray-700">
-                  By accessing and using LuxeBag's website, you accept and agree to be bound by these Terms and Conditions.
+                  By accessing and using LuxeBag&apos;s website, you accept and agree to be bound by these Terms and Conditions.
                 </p>
               </section>
 
@@ -42,9 +45,7 @@ const TermsPage = () => {
 
               <section className="mb-8">
                 <h2 className="text-2xl font-bold mb-4">3. Orders and Payment</h2>
-                <p className="text-gray-700 mb-4">
-                  By placing an order, you agree to:
-                </p>
+                <p className="text-gray-700 mb-4">By placing an order, you agree to:</p>
                 <ul className="list-disc pl-6 text-gray-700 space-y-2">
                   <li>Provide accurate billing and shipping information</li>
                   <li>Pay for all ordered products</li>

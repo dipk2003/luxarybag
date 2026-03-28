@@ -11,7 +11,7 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 const CategoryPage = () => {
   const { slug } = useParams();
   const { products, categories, faqs, loading } = useSupabaseData();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -20,16 +20,17 @@ const CategoryPage = () => {
     );
   }
 
-  const category = categories.find(c => c.slug === slug);
-  const categoryProducts = slug === 'all' 
-    ? products 
-    : products.filter(p => p.category === slug);
+  const category = categories.find((entry) => entry.slug === slug);
+  const categoryProducts = slug === 'all' ? products : products.filter((product) => product.category === slug);
 
   return (
     <>
       <Helmet>
         <title>{category?.name || 'All Bags'} - Premium Luxury Collection | LuxeBag</title>
-        <meta name="description" content={`Browse our ${category?.name || 'complete'} collection of luxury bags. Free delivery, COD available, easy returns.`} />
+        <meta
+          name="description"
+          content={`Browse our ${category?.name || 'complete'} collection of luxury bags. Free delivery, COD available, easy returns.`}
+        />
       </Helmet>
 
       <div className="min-h-screen pb-20 md:pb-0">
@@ -50,10 +51,10 @@ const CategoryPage = () => {
               >
                 <Link to={`/product/${product.slug}`} className="group block">
                   <div className="aspect-square overflow-hidden rounded-lg mb-4 bg-gray-100 relative">
-                    <img 
+                    <img
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       alt={product.name}
-                      src={product.images && product.images[0] ? product.images[0] : "https://images.unsplash.com/photo-1635865165118-917ed9e20936"}
+                      src={product.images && product.images[0] ? product.images[0] : 'https://images.unsplash.com/photo-1635865165118-917ed9e20936'}
                     />
                     {product.discount > 0 && (
                       <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-lg text-xs font-bold">
@@ -76,7 +77,6 @@ const CategoryPage = () => {
             ))}
           </div>
 
-          {/* FAQs */}
           <div className="mt-16">
             <h2 className="text-2xl font-bold mb-6">Frequently Asked Questions</h2>
             <div className="space-y-4">

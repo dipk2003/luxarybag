@@ -8,7 +8,10 @@ const PrivacyPolicyPage = () => {
     <>
       <Helmet>
         <title>Privacy Policy - LuxeBag</title>
-        <meta name="description" content="Read LuxeBag's privacy policy. Learn how we collect, use, and protect your personal information." />
+        <meta
+          name="description"
+          content="Read LuxeBag's privacy policy. Learn how we collect, use, and protect your personal information."
+        />
       </Helmet>
 
       <div className="min-h-screen">
@@ -17,8 +20,8 @@ const PrivacyPolicyPage = () => {
         <div className="container mx-auto px-4 py-12">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-3xl md:text-4xl font-bold mb-8">Privacy Policy</h1>
-            
-            <div className="prose prose-lg max-w-none">
+
+            <div className="max-w-none">
               <p className="text-gray-600 mb-8">Last updated: December 14, 2025</p>
 
               <section className="mb-8">
@@ -28,7 +31,7 @@ const PrivacyPolicyPage = () => {
                 </p>
                 <ul className="list-disc pl-6 text-gray-700 space-y-2">
                   <li>Name, email address, phone number, and shipping address</li>
-                  <li>Payment information (processed securely through our payment partners)</li>
+                  <li>Payment information processed securely through our payment partners</li>
                   <li>Order history and preferences</li>
                   <li>Communications with customer support</li>
                 </ul>
@@ -41,7 +44,7 @@ const PrivacyPolicyPage = () => {
                   <li>Process and fulfill your orders</li>
                   <li>Send order confirmations and updates</li>
                   <li>Respond to your inquiries and provide customer support</li>
-                  <li>Send promotional emails (with your consent)</li>
+                  <li>Send promotional emails with your consent</li>
                   <li>Improve our products and services</li>
                 </ul>
               </section>
@@ -51,7 +54,7 @@ const PrivacyPolicyPage = () => {
                 <p className="text-gray-700">
                   We do not sell, trade, or rent your personal information to third parties. We may share your information with:
                 </p>
-                <ul className="list-disc pl-6 text-gray-700 space-y-2">
+                <ul className="list-disc pl-6 text-gray-700 space-y-2 mt-4">
                   <li>Shipping partners to deliver your orders</li>
                   <li>Payment processors to complete transactions</li>
                   <li>Service providers who assist in our operations</li>

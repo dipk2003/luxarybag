@@ -3,16 +3,19 @@ import { Helmet } from 'react-helmet';
 import { ChevronDown } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useMockData } from '@/hooks/useMockData';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 const FAQPage = () => {
-  const { faqs } = useMockData();
+  const { faqs } = useSupabaseData();
 
   return (
     <>
       <Helmet>
         <title>FAQs - Frequently Asked Questions | LuxeBag</title>
-        <meta name="description" content="Find answers to frequently asked questions about LuxeBag products, delivery, returns, and more." />
+        <meta
+          name="description"
+          content="Find answers to frequently asked questions about LuxeBag products, delivery, returns, and more."
+        />
       </Helmet>
 
       <div className="min-h-screen">

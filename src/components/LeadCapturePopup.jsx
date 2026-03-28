@@ -3,7 +3,7 @@ import { X, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { leadService } from '@/modules/marketing/leadService';
 
 const LeadCapturePopup = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,17 +31,15 @@ const LeadCapturePopup = () => {
       return;
     }
 
-    // Save lead to Supabase
-    const { error } = await supabase.from('leads').insert([{
+    try {
+      await leadService.createLead({
         name,
         email,
         source: 'popup',
-        discount: 100
-    }]);
-
-    if (error) {
-        console.error("Lead capture failed:", error);
-        // Fallback or silent fail not critical for UX, but good to know
+        discount: 100,
+      });
+    } catch (error) {
+      console.error('Lead capture failed:', error);
     }
 
     localStorage.setItem('lead_popup_shown', 'true');

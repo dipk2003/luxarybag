@@ -1,12 +1,14 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useStore } from '@/contexts/ModeContext';
 
 const WhatsAppButton = () => {
+  const { settings } = useStore();
+
   const handleWhatsAppClick = () => {
-    const phoneNumber = '919876543210';
     const message = encodeURIComponent('Hi! I\'m interested in your luxury bags.');
-    window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+    window.open(`https://wa.me/${settings.whatsappNumber}?text=${message}`, '_blank');
   };
 
   return (

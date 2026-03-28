@@ -17,7 +17,7 @@ const ShopPage = () => {
   const [sortBy, setSortBy] = useState('featured');
   const [showFilters, setShowFilters] = useState(false);
 
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
@@ -40,18 +40,21 @@ const ShopPage = () => {
   });
 
   if (loading) {
-     return (
-       <div className="min-h-screen flex items-center justify-center">
-         <Loader2 className="w-8 h-8 animate-spin text-yellow-600" />
-       </div>
-     );
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-yellow-600" />
+      </div>
+    );
   }
 
   return (
     <>
       <Helmet>
         <title>Shop Luxury Bags - Premium Designer Handbags Online | LuxeBag</title>
-        <meta name="description" content="Browse our complete collection of luxury bags. Filter by category, price, and style. Free delivery, COD available, easy returns on all products." />
+        <meta
+          name="description"
+          content="Browse our complete collection of luxury bags. Filter by category, price, and style. Free delivery, COD available, easy returns on all products."
+        />
       </Helmet>
 
       <div className="min-h-screen pb-20 md:pb-0">
@@ -59,13 +62,11 @@ const ShopPage = () => {
         <Header />
 
         <div className="container mx-auto px-4 py-8">
-          {/* Page Header */}
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold mb-4">Shop All Bags</h1>
             <p className="text-gray-600">Discover our complete collection of premium luxury bags</p>
           </div>
 
-          {/* Search & Filter Bar */}
           <div className="mb-6 space-y-4">
             <div className="flex gap-4">
               <div className="flex-1 relative">
@@ -78,17 +79,12 @@ const ShopPage = () => {
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-600 focus:border-transparent outline-none"
                 />
               </div>
-              <Button
-                onClick={() => setShowFilters(!showFilters)}
-                variant="outline"
-                className="px-6"
-              >
+              <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="px-6">
                 <SlidersHorizontal className="w-5 h-5 mr-2" />
                 Filters
               </Button>
             </div>
 
-            {/* Mobile Filters */}
             {showFilters && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -102,7 +98,7 @@ const ShopPage = () => {
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
                   >
-                    {categories.map(cat => (
+                    {categories.map((cat) => (
                       <option key={cat.slug} value={cat.slug}>
                         {cat.name} ({cat.count})
                       </option>
@@ -136,7 +132,7 @@ const ShopPage = () => {
                       max="20000"
                       step="1000"
                       value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value, 10)])}
                       className="w-full"
                     />
                   </div>
@@ -145,7 +141,6 @@ const ShopPage = () => {
             )}
           </div>
 
-          {/* Results Count */}
           <div className="mb-6 flex items-center justify-between">
             <p className="text-gray-600">
               Showing {sortedProducts.length} of {products.length} products
@@ -166,7 +161,6 @@ const ShopPage = () => {
             )}
           </div>
 
-          {/* Products Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {sortedProducts.map((product, index) => (
               <motion.div
@@ -177,10 +171,10 @@ const ShopPage = () => {
               >
                 <Link to={`/product/${product.slug}`} className="group block">
                   <div className="aspect-square overflow-hidden rounded-lg mb-4 bg-gray-100 relative">
-                    <img 
+                    <img
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       alt={product.name}
-                      src={product.images && product.images[0] ? product.images[0] : "https://images.unsplash.com/photo-1635865165118-917ed9e20936"}
+                      src={product.images && product.images[0] ? product.images[0] : 'https://images.unsplash.com/photo-1635865165118-917ed9e20936'}
                     />
                     {product.discount > 0 && (
                       <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-lg text-xs font-bold">
@@ -219,11 +213,13 @@ const ShopPage = () => {
           {sortedProducts.length === 0 && (
             <div className="text-center py-16">
               <p className="text-gray-500 text-lg mb-4">No products found matching your criteria</p>
-              <Button onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-                setPriceRange([0, 20000]);
-              }}>
+              <Button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('all');
+                  setPriceRange([0, 20000]);
+                }}
+              >
                 Clear All Filters
               </Button>
             </div>

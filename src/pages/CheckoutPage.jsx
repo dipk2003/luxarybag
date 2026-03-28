@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useMode } from '@/contexts/ModeContext';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { orderService } from '@/modules/orders/orderService';
+
+const generateOrderId = () => `ORD-${Date.now().toString().slice(-6)}`;
 
 const CheckoutPage = () => {
   const { cart, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
@@ -22,58 +24,55 @@ const CheckoutPage = () => {
     address: '',
     city: '',
     state: '',
-    pincode: ''
+    pincode: '',
   });
-
-  const generateOrderId = () => {
-    return 'ORD-' + Math.floor(100000 + Math.random() * 900000);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!isGrowthMode) {
       toast({
-        title: "Checkout not available",
-        description: "Please contact us on WhatsApp to complete your order.",
-        variant: "destructive"
+        title: 'Checkout not available',
+        description: 'Please contact us on WhatsApp to complete your order.',
+        variant: 'destructive',
       });
       return;
     }
 
     setLoading(true);
 
-    const orderId = generateOrderId();
-    const orderData = {
-      order_id: orderId,
-      customer_name: formData.name,
-      customer_phone: formData.phone,
-      customer_address: formData.address,
-      customer_city: formData.city,
-      customer_pincode: formData.pincode,
-      items: cart,
-      total_amount: cartTotal,
-      status: 'New',
-      payment_method: 'COD'
-    };
-
-    const { error } = await supabase.from('orders').insert([orderData]);
-
-    setLoading(false);
-
-    if (error) {
-      toast({
-        title: "Order Failed",
-        description: error.message,
-        variant: "destructive"
+    try {
+      const orderId = generateOrderId();
+      await orderService.create({
+        orderId,
+        customerName: formData.name,
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+        customerAddress: formData.address,
+        customerCity: formData.city,
+        customerState: formData.state,
+        customerPincode: formData.pincode,
+        items: cart,
+        subtotalAmount: cartTotal,
+        shippingAmount: 0,
+        totalAmount: cartTotal,
+        paymentMethod: 'COD',
       });
-    } else {
+
       toast({
-        title: "Order Placed Successfully!",
-        description: `Your Order ID is ${orderId}`
+        title: 'Order Placed Successfully!',
+        description: `Your Order ID is ${orderId}`,
       });
       clearCart();
       navigate(`/order-success/${orderId}`);
+    } catch (error) {
+      toast({
+        title: 'Order Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -81,7 +80,7 @@ const CheckoutPage = () => {
     return (
       <>
         <Helmet>
-          <title>Shopping Cart - LuxeBag by Raiya</title>
+          <title>Shopping Cart - LuxeBag</title>
         </Helmet>
         <div className="min-h-screen">
           <Header />
@@ -101,7 +100,7 @@ const CheckoutPage = () => {
   return (
     <>
       <Helmet>
-        <title>Checkout - LuxeBag by Raiya</title>
+        <title>Checkout - LuxeBag</title>
       </Helmet>
 
       <div className="min-h-screen pb-20 md:pb-0">
@@ -111,35 +110,22 @@ const CheckoutPage = () => {
           <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
               {cart.map((item) => (
                 <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 flex gap-4">
                   <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                    <img 
-                      className="w-full h-full object-cover"
-                      alt={item.name}
-                      src={item.images?.[0]} 
-                    />
+                    <img className="w-full h-full object-cover" alt={item.name} src={item.images?.[0]} />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold mb-2">{item.name}</h3>
                     <p className="text-lg font-bold text-yellow-600 mb-3">₹{item.price.toLocaleString()}</p>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
                           <Minus className="w-4 h-4" />
                         </Button>
                         <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
                           <Plus className="w-4 h-4" />
                         </Button>
                       </div>
@@ -157,7 +143,6 @@ const CheckoutPage = () => {
               ))}
             </div>
 
-            {/* Order Summary & Form */}
             <div>
               <div className="bg-gray-50 p-6 rounded-xl mb-6">
                 <h2 className="text-xl font-bold mb-4">Order Summary</h2>
@@ -186,7 +171,7 @@ const CheckoutPage = () => {
                     placeholder="Full Name"
                     required
                     value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
                   />
                   <input
@@ -194,21 +179,21 @@ const CheckoutPage = () => {
                     placeholder="Phone"
                     required
                     value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
                   />
-                   <input
+                  <input
                     type="email"
                     placeholder="Email (Optional)"
                     value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
                   />
                   <textarea
                     placeholder="Full Address"
                     required
                     value={formData.address}
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
                     rows="3"
                   />
@@ -218,7 +203,7 @@ const CheckoutPage = () => {
                       placeholder="City"
                       required
                       value={formData.city}
-                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                       className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
                     />
                     <input
@@ -226,7 +211,7 @@ const CheckoutPage = () => {
                       placeholder="Pincode"
                       required
                       value={formData.pincode}
-                      onChange={(e) => setFormData({...formData, pincode: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
                       className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-yellow-600 outline-none"
                     />
                   </div>
@@ -236,7 +221,7 @@ const CheckoutPage = () => {
                 </form>
               ) : (
                 <div className="bg-blue-50 p-6 rounded-xl text-center">
-                    <p className="mb-4 text-blue-800">Checkout is currently disabled. Please contact us on WhatsApp to order.</p>
+                  <p className="mb-4 text-blue-800">Checkout is currently disabled. Please contact us on WhatsApp to order.</p>
                 </div>
               )}
             </div>

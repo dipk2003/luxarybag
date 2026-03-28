@@ -1,77 +1,126 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import AdminShell from '@/components/admin/AdminShell';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { contentService } from '@/modules/content/contentService';
 
 const AdminInstagram = () => {
-  const [settings, setSettings] = useState({ feed_url: '', trusted_badge_text: '' });
+  const [settings, setSettings] = useState({
+    handle: '',
+    profileUrl: '',
+    badgeText: '',
+    gallery: [],
+  });
+  const [galleryInput, setGalleryInput] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchSettings();
+    let active = true;
+
+    const loadSettings = async () => {
+      try {
+        const data = await contentService.getInstagramSettings();
+        if (active) {
+          setSettings(data);
+          setGalleryInput((data.gallery || []).join('\n'));
+        }
+      } catch (error) {
+        toast({
+          title: 'Unable to load Instagram settings',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadSettings();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const fetchSettings = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from('instagram_settings').select('*').single();
-    if (!error && data) {
-      setSettings(data);
-    }
-    setLoading(false);
-  };
-
   const handleSave = async () => {
-      // Upsert logic for single row settings
-      const { error } = await supabase
-        .from('instagram_settings')
-        .upsert([{ ...settings, id: 1 }]); // Force ID 1 for singleton
-
-      if (error) {
-           toast({ title: "Error saving settings", description: error.message, variant: "destructive" });
-      } else {
-           toast({ title: "Settings saved" });
-      }
+    try {
+      const nextSettings = await contentService.saveInstagramSettings({
+        ...settings,
+        gallery: galleryInput
+          .split('\n')
+          .map((value) => value.trim())
+          .filter(Boolean),
+      });
+      setSettings(nextSettings);
+      setGalleryInput((nextSettings.gallery || []).join('\n'));
+      toast({ title: 'Instagram settings saved' });
+    } catch (error) {
+      toast({
+        title: 'Unable to save settings',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link to="/admin">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold">Instagram Feed Settings</h1>
+    <AdminShell
+      title="Instagram"
+      description="Control the feed handle, trust badge, and image gallery shown on the storefront."
+    >
+      {loading ? (
+        <div className="flex justify-center p-20">
+          <Loader2 className="w-8 h-8 animate-spin text-stone-900" />
+        </div>
+      ) : (
+        <div className="rounded-[32px] border border-stone-100 bg-[#faf7f3] p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <input
+              type="text"
+              value={settings.handle}
+              onChange={(event) => setSettings({ ...settings, handle: event.target.value })}
+              placeholder="Instagram handle"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              value={settings.profileUrl}
+              onChange={(event) =>
+                setSettings({ ...settings, profileUrl: event.target.value })
+              }
+              placeholder="Profile URL"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
           </div>
+          <input
+            type="text"
+            value={settings.badgeText}
+            onChange={(event) =>
+              setSettings({ ...settings, badgeText: event.target.value })
+            }
+            placeholder="Badge text"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+          <textarea
+            rows="8"
+            value={galleryInput}
+            onChange={(event) => setGalleryInput(event.target.value)}
+            placeholder="One image URL per line"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+          <Button
+            type="button"
+            onClick={handleSave}
+            className="mt-6 rounded-full bg-stone-950 text-white hover:bg-stone-800"
+          >
+            Save settings
+          </Button>
         </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-sm p-8">
-            {loading ? <Loader2 className="animate-spin" /> : (
-                <div className="space-y-4">
-                    <h2 className="text-xl font-bold mb-4">Configuration</h2>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Feed URL / ID</label>
-                        <input className="w-full p-2 border rounded" value={settings.feed_url || ''} onChange={e => setSettings({...settings, feed_url: e.target.value})} placeholder="Instagram User ID or API URL" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Trust Badge Text</label>
-                        <input className="w-full p-2 border rounded" value={settings.trusted_badge_text || ''} onChange={e => setSettings({...settings, trusted_badge_text: e.target.value})} placeholder="e.g. Follow us @LuxeBag" />
-                    </div>
-                    <Button onClick={handleSave} className="bg-yellow-600 hover:bg-yellow-700">
-                        Save Settings
-                    </Button>
-                </div>
-            )}
-        </div>
-      </div>
-    </div>
+      )}
+    </AdminShell>
   );
 };
 

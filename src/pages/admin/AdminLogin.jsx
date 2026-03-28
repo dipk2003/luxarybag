@@ -1,61 +1,81 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { LockKeyhole, Mail } from 'lucide-react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/use-toast';
-import { Lock } from 'lucide-react';
 
 const AdminLogin = () => {
-  const [password, setPassword] = useState('');
-  const { login } = useAdminAuth();
   const navigate = useNavigate();
+  const { login, isAuthenticated, loading } = useAdminAuth();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    if (login(password)) {
-      toast({
-        title: "Login successful!",
-        description: "Welcome to admin panel"
-      });
-      navigate('/admin');
-    } else {
-      toast({
-        title: "Login failed",
-        description: "Incorrect password. Try 'admin123'",
-        variant: "destructive"
-      });
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/admin', { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    const { error } = await login(formData);
+    setSubmitting(false);
+
+    if (!error) {
+      navigate('/admin', { replace: true });
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-8 h-8 text-yellow-600" />
-          </div>
-          <h1 className="text-2xl font-bold mb-2">Admin Login</h1>
-          <p className="text-gray-600">Enter password to access admin panel</p>
+    <div className="flex min-h-screen items-center justify-center bg-[#f4efe8] p-4">
+      <div className="w-full max-w-md rounded-[36px] border border-white/70 bg-white/85 p-8 shadow-[0_24px_100px_rgba(28,25,23,0.12)] md:p-10">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-stone-950 text-white">
+          <LockKeyhole className="w-7 h-7" />
+        </div>
+        <div className="mt-6 text-center">
+          <p className="text-xs uppercase tracking-[0.26em] text-stone-400">Admin access</p>
+          <h1 className="mt-3 font-display text-4xl text-stone-950">Sign in with Supabase</h1>
+          <p className="mt-3 text-sm leading-7 text-stone-500">
+            Use the admin account you created in Supabase Auth and mapped to an admin role.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          <label className="relative block">
+            <Mail className="absolute left-4 top-1/2 w-4 h-4 -translate-y-1/2 text-stone-400" />
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(event) =>
+                setFormData({ ...formData, email: event.target.value })
+              }
+              placeholder="Admin email"
+              className="w-full rounded-2xl border border-stone-200 bg-[#faf7f3] py-3 pl-11 pr-4 outline-none transition focus:border-stone-900"
+            />
+          </label>
           <input
             type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-600 focus:border-transparent outline-none"
             required
+            value={formData.password}
+            onChange={(event) =>
+              setFormData({ ...formData, password: event.target.value })
+            }
+            placeholder="Password"
+            className="w-full rounded-2xl border border-stone-200 bg-[#faf7f3] px-4 py-3 outline-none transition focus:border-stone-900"
           />
-          <Button type="submit" className="w-full bg-yellow-600 hover:bg-yellow-700 h-12">
-            Login
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="h-12 w-full rounded-full bg-stone-950 text-white hover:bg-stone-800"
+          >
+            {submitting ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
-
-        <p className="text-xs text-gray-500 text-center mt-6">
-          Demo password: admin123
-        </p>
       </div>
     </div>
   );

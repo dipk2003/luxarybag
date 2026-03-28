@@ -1,94 +1,143 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Package, 
-  Users, 
-  Star, 
-  FileText, 
-  Settings, 
-  Instagram,
-  ToggleLeft,
-  ToggleRight
-} from 'lucide-react';
-import { useMode } from '@/contexts/ModeContext';
-import { useAdminAuth } from '@/contexts/AdminAuthContext';
-import { Button } from '@/components/ui/button';
+import { FileText, Loader2, Package, Star, Users } from 'lucide-react';
+import AdminShell from '@/components/admin/AdminShell';
+import { dashboardService } from '@/modules/admin/dashboardService';
+import { formatCurrency, formatDate } from '@/modules/shared/utils/formatters';
+
+const statCards = [
+  { key: 'products', label: 'Products', icon: Package },
+  { key: 'leads', label: 'Leads', icon: Users },
+  { key: 'reviews', label: 'Reviews', icon: Star },
+  { key: 'blogPosts', label: 'Blog Posts', icon: FileText },
+];
 
 const AdminDashboard = () => {
-  const { mode, toggleMode } = useMode();
-  const { logout } = useAdminAuth();
-  const stats = [
-    { label: 'Total Products', value: '8', icon: Package },
-    { label: 'Total Leads', value: '0', icon: Users },
-    { label: 'Reviews', value: '5', icon: Star },
-    { label: 'Blog Posts', value: '0', icon: FileText },
-  ];
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const menuItems = [
-    { label: 'Products', href: '/admin/products', icon: Package },
-    { label: 'Leads', href: '/admin/leads', icon: Users },
-    { label: 'Reviews', href: '/admin/reviews', icon: Star },
-    { label: 'Blog', href: '/admin/blog', icon: FileText },
-    { label: 'Instagram', href: '/admin/instagram', icon: Instagram },
-    { label: 'Settings', href: '/admin/settings', icon: Settings },
-  ];
+  useEffect(() => {
+    let active = true;
+
+    const loadSummary = async () => {
+      try {
+        const data = await dashboardService.getSummary();
+        if (active) {
+          setSummary(data);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadSummary();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Admin Panel</h1>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Mode:</span>
-                <button
-                  onClick={() => toggleMode(mode === 'STARTER' ? 'GROWTH' : 'STARTER')}
-                  className={`px-4 py-2 rounded-lg font-semibold flex items-center gap-2 ${
-                    mode === 'GROWTH' 
-                      ? 'bg-green-600 text-white' 
-                      : 'bg-yellow-600 text-white'
-                  }`}
-                >
-                  {mode === 'GROWTH' ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                  {mode}
-                </button>
+    <AdminShell
+      title="Dashboard"
+      description="A quick overview of catalog activity, captured leads, and recent orders."
+    >
+      {loading ? (
+        <div className="flex justify-center p-20">
+          <Loader2 className="w-8 h-8 animate-spin text-stone-900" />
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {statCards.map((card) => (
+              <div
+                key={card.key}
+                className="rounded-[28px] border border-stone-100 bg-[#faf7f3] p-6"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-[0.24em] text-stone-400">
+                    {card.label}
+                  </p>
+                  <card.icon className="w-5 h-5 text-stone-500" />
+                </div>
+                <p className="mt-5 text-4xl font-semibold text-stone-950">
+                  {summary?.stats?.[card.key] || 0}
+                </p>
               </div>
-              <Button onClick={logout} variant="outline">Logout</Button>
+            ))}
+            <div className="rounded-[28px] border border-stone-100 bg-stone-950 p-6 text-white">
+              <p className="text-xs uppercase tracking-[0.24em] text-white/45">Recent revenue</p>
+              <p className="mt-5 text-4xl font-semibold">
+                {formatCurrency(summary?.stats?.totalRevenue || 0)}
+              </p>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <stat.icon className="w-8 h-8 text-yellow-600" />
+          <div className="mt-8 grid gap-8 xl:grid-cols-[0.95fr_minmax(0,1.05fr)]">
+            <div className="rounded-[32px] border border-stone-100 bg-[#faf7f3] p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.24em] text-stone-400">
+                    Recent orders
+                  </p>
+                  <h2 className="mt-2 font-display text-3xl text-stone-950">
+                    Latest incoming orders
+                  </h2>
+                </div>
+                <Link to="/admin/orders" className="text-sm font-semibold text-stone-900">
+                  View all
+                </Link>
               </div>
-              <p className="text-3xl font-bold mb-1">{stat.value}</p>
-              <p className="text-gray-600">{stat.label}</p>
+              <div className="mt-6 space-y-3">
+                {(summary?.recentOrders || []).map((order) => (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between gap-4 rounded-[24px] bg-white p-4"
+                  >
+                    <div>
+                      <p className="font-semibold text-stone-950">{order.customerName}</p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.22em] text-stone-400">
+                        {order.orderId} • {formatDate(order.createdAt)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-stone-950">
+                        {formatCurrency(order.totalAmount)}
+                      </p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.22em] text-stone-400">
+                        {order.status}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
 
-        {/* Quick Links */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {menuItems.map((item, index) => (
-            <Link
-              key={index}
-              to={item.href}
-              className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow flex items-center gap-4"
-            >
-              <item.icon className="w-6 h-6 text-yellow-600" />
-              <span className="font-semibold">{item.label}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
+            <div className="rounded-[32px] border border-stone-100 bg-[#faf7f3] p-6">
+              <p className="text-xs uppercase tracking-[0.24em] text-stone-400">Action guide</p>
+              <h2 className="mt-2 font-display text-3xl text-stone-950">
+                What you can manage here
+              </h2>
+              <div className="mt-6 grid gap-3">
+                {[
+                  ['Products', 'Create catalog items, update pricing, and control badges.'],
+                  ['Orders', 'Track incoming COD orders and update shipment status.'],
+                  ['Leads', 'Export captured emails from the popup and landing pages.'],
+                  ['Settings', 'Control brand copy, phone number, and store mode.'],
+                ].map(([title, description]) => (
+                  <div key={title} className="rounded-[24px] bg-white p-4">
+                    <p className="font-semibold text-stone-950">{title}</p>
+                    <p className="mt-2 text-sm leading-7 text-stone-600">{description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </AdminShell>
   );
 };
 

@@ -1,8 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { useStore } from '@/contexts/ModeContext';
 
 const Footer = () => {
+  const { settings } = useStore();
+  const brandLabel = settings.brandShortName || 'Luxe';
+  const compactBrand = brandLabel.toUpperCase().replace(/\s+/g, '');
+  const brandPrefix = compactBrand.endsWith('BAG')
+    ? compactBrand.slice(0, -3)
+    : compactBrand;
+  const brandSuffix = compactBrand.endsWith('BAG') ? 'BAG' : '';
+
   const quickLinks = [
     { name: 'About Us', href: '/about' },
     { name: 'Shop', href: '/shop' },
@@ -18,28 +27,30 @@ const Footer = () => {
   ];
 
   const socialLinks = [
-    { icon: Facebook, href: '#', label: 'Facebook' },
-    { icon: Instagram, href: '#', label: 'Instagram' },
-    { icon: Twitter, href: '#', label: 'Twitter' },
+    { icon: Facebook, href: settings.socialLinks?.facebook || '#', label: 'Facebook' },
+    { icon: Instagram, href: settings.socialLinks?.instagram || '#', label: 'Instagram' },
+    { icon: Twitter, href: settings.socialLinks?.twitter || '#', label: 'Twitter' },
   ];
 
   return (
     <footer className="bg-black text-white mt-16">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Brand */}
           <div>
             <span className="text-2xl font-bold tracking-tight">
-              LUXE<span className="text-yellow-600">BAG</span>
+              {brandPrefix}
+              {brandSuffix ? <span className="text-yellow-600">{brandSuffix}</span> : null}
             </span>
             <p className="mt-4 text-gray-400 text-sm leading-relaxed">
-              Premium luxury bags crafted with excellence. Your style, our passion.
+              {settings.tagline || 'Premium luxury bags crafted with excellence. Your style, our passion.'}
             </p>
             <div className="flex space-x-4 mt-6">
               {socialLinks.map((social) => (
                 <a
                   key={social.label}
                   href={social.href}
+                  target="_blank"
+                  rel="noreferrer"
                   aria-label={social.label}
                   className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-yellow-600 transition-colors"
                 >
@@ -49,7 +60,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Quick Links */}
           <div>
             <span className="text-lg font-semibold">Quick Links</span>
             <ul className="mt-4 space-y-2">
@@ -66,7 +76,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Customer Service */}
           <div>
             <span className="text-lg font-semibold">Customer Service</span>
             <ul className="mt-4 space-y-2">
@@ -83,21 +92,20 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
             <span className="text-lg font-semibold">Contact Us</span>
             <ul className="mt-4 space-y-3">
               <li className="flex items-start space-x-3 text-gray-400 text-sm">
                 <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                <span>123 Luxury Street, Fashion District, Mumbai 400001</span>
+                <span>{settings.addressLine}</span>
               </li>
               <li className="flex items-center space-x-3 text-gray-400 text-sm">
                 <Phone className="w-5 h-5 flex-shrink-0" />
-                <span>+91 98765 43210</span>
+                <span>{settings.supportPhone}</span>
               </li>
               <li className="flex items-center space-x-3 text-gray-400 text-sm">
                 <Mail className="w-5 h-5 flex-shrink-0" />
-                <span>info@luxebag.com</span>
+                <span>{settings.contactEmail}</span>
               </li>
             </ul>
           </div>

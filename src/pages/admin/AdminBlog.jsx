@@ -1,125 +1,267 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Loader2, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Loader2, Plus, Trash2, X } from 'lucide-react';
+import AdminShell from '@/components/admin/AdminShell';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { contentService } from '@/modules/content/contentService';
+import { formatDate } from '@/modules/shared/utils/formatters';
+
+const emptyPost = {
+  title: '',
+  slug: '',
+  excerpt: '',
+  metaDescription: '',
+  category: 'Style',
+  readTime: '4 min read',
+  featuredImage: '',
+  content: '',
+  published: true,
+};
 
 const AdminBlog = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingPost, setEditingPost] = useState(emptyPost);
   const [showForm, setShowForm] = useState(false);
-  const [newPost, setNewPost] = useState({ title: '', slug: '', content: '', meta_description: '' });
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      const data = await contentService.listBlogPosts();
+      setPosts(data);
+    } catch (error) {
+      toast({
+        title: 'Unable to load blog posts',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchPosts();
   }, []);
 
-  const fetchPosts = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      setPosts(data);
+  const handleSave = async (event) => {
+    event.preventDefault();
+    try {
+      await contentService.saveBlogPost(editingPost);
+      toast({
+        title: editingPost.id ? 'Post updated' : 'Post created',
+      });
+      setEditingPost(emptyPost);
+      setShowForm(false);
+      fetchPosts();
+    } catch (error) {
+      toast({
+        title: 'Unable to save post',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
-    setLoading(false);
-  };
-
-  const handleSave = async (e) => {
-      e.preventDefault();
-      const { error } = await supabase.from('blog_posts').insert([newPost]);
-      if (error) {
-          toast({ title: "Error creating post", description: error.message, variant: "destructive" });
-      } else {
-          toast({ title: "Blog post created" });
-          setShowForm(false);
-          setNewPost({ title: '', slug: '', content: '', meta_description: '' });
-          fetchPosts();
-      }
   };
 
   const handleDelete = async (id) => {
-      const { error } = await supabase.from('blog_posts').delete().eq('id', id);
-       if (error) {
-          toast({ title: "Error deleting post", description: error.message, variant: "destructive" });
-      } else {
-          toast({ title: "Post deleted" });
-          fetchPosts();
-      }
+    try {
+      await contentService.deleteBlogPost(id);
+      fetchPosts();
+    } catch (error) {
+      toast({
+        title: 'Unable to delete post',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/admin">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
-              <h1 className="text-2xl font-bold">Blog Management</h1>
+    <AdminShell
+      title="Blog"
+      description="Publish styling notes, gift guides, and care content directly from the admin."
+      action={
+        <Button
+          type="button"
+          onClick={() => {
+            setEditingPost(emptyPost);
+            setShowForm(true);
+          }}
+          className="rounded-full bg-stone-950 text-white hover:bg-stone-800"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          New post
+        </Button>
+      }
+    >
+      {showForm ? (
+        <form
+          onSubmit={handleSave}
+          className="mb-8 rounded-[32px] border border-stone-100 bg-[#faf7f3] p-6"
+        >
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-stone-400">Editor</p>
+              <h2 className="mt-2 font-display text-3xl text-stone-950">
+                {editingPost.id ? 'Edit post' : 'Create post'}
+              </h2>
             </div>
-            <Button onClick={() => setShowForm(true)} className="bg-yellow-600 hover:bg-yellow-700">
-              <Plus className="w-4 h-4 mr-2" /> Create Post
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowForm(false)}
+              className="rounded-full"
+            >
+              <X className="w-4 h-4" />
             </Button>
           </div>
-        </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        {showForm && (
-            <div className="bg-white p-6 rounded-xl shadow-lg mb-8">
-                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold">New Blog Post</h2>
-                    <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}><X className="w-4 h-4" /></Button>
-                </div>
-                <form onSubmit={handleSave} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Title</label>
-                        <input className="w-full p-2 border rounded" required value={newPost.title} onChange={e => setNewPost({...newPost, title: e.target.value})} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Slug</label>
-                        <input className="w-full p-2 border rounded" required value={newPost.slug} onChange={e => setNewPost({...newPost, slug: e.target.value})} />
-                    </div>
-                     <div>
-                        <label className="block text-sm font-medium mb-1">Meta Description</label>
-                        <textarea className="w-full p-2 border rounded" required value={newPost.meta_description} onChange={e => setNewPost({...newPost, meta_description: e.target.value})} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Content</label>
-                        <textarea className="w-full p-2 border rounded" rows="6" required value={newPost.content} onChange={e => setNewPost({...newPost, content: e.target.value})} />
-                    </div>
-                    <Button type="submit">Publish Post</Button>
-                </form>
-            </div>
-        )}
-
-        {loading ? (
-             <div className="flex justify-center p-12"><Loader2 className="animate-spin" /></div>
-        ) : posts.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-            <p className="text-gray-500 mb-4">No blog posts yet</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <input
+              type="text"
+              required
+              value={editingPost.title}
+              onChange={(event) =>
+                setEditingPost({ ...editingPost, title: event.target.value })
+              }
+              placeholder="Title"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              required
+              value={editingPost.slug}
+              onChange={(event) =>
+                setEditingPost({ ...editingPost, slug: event.target.value })
+              }
+              placeholder="Slug"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              value={editingPost.category}
+              onChange={(event) =>
+                setEditingPost({ ...editingPost, category: event.target.value })
+              }
+              placeholder="Category"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
+            <input
+              type="text"
+              value={editingPost.readTime}
+              onChange={(event) =>
+                setEditingPost({ ...editingPost, readTime: event.target.value })
+              }
+              placeholder="Read time"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+            />
           </div>
-        ) : (
-             <div className="space-y-4">
-                 {posts.map(post => (
-                     <div key={post.id} className="bg-white p-6 rounded-xl shadow-sm flex justify-between items-center">
-                         <div>
-                             <h3 className="font-bold text-lg">{post.title}</h3>
-                             <p className="text-sm text-gray-500">{new Date(post.created_at).toLocaleDateString()}</p>
-                         </div>
-                         <Button variant="destructive" size="sm" onClick={() => handleDelete(post.id)}>Delete</Button>
-                     </div>
-                 ))}
-             </div>
-        )}
-      </div>
-    </div>
+          <input
+            type="text"
+            value={editingPost.featuredImage}
+            onChange={(event) =>
+              setEditingPost({ ...editingPost, featuredImage: event.target.value })
+            }
+            placeholder="Featured image URL"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+          <textarea
+            rows="3"
+            value={editingPost.excerpt}
+            onChange={(event) =>
+              setEditingPost({ ...editingPost, excerpt: event.target.value })
+            }
+            placeholder="Excerpt"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+          <textarea
+            rows="3"
+            value={editingPost.metaDescription}
+            onChange={(event) =>
+              setEditingPost({ ...editingPost, metaDescription: event.target.value })
+            }
+            placeholder="Meta description"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+          <textarea
+            rows="10"
+            required
+            value={editingPost.content}
+            onChange={(event) =>
+              setEditingPost({ ...editingPost, content: event.target.value })
+            }
+            placeholder="Post content"
+            className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-stone-900"
+          />
+          <label className="mt-4 inline-flex items-center gap-3 text-sm text-stone-600">
+            <input
+              type="checkbox"
+              checked={editingPost.published}
+              onChange={(event) =>
+                setEditingPost({ ...editingPost, published: event.target.checked })
+              }
+            />
+            Published
+          </label>
+          <Button
+            type="submit"
+            className="mt-6 rounded-full bg-stone-950 text-white hover:bg-stone-800"
+          >
+            Save post
+          </Button>
+        </form>
+      ) : null}
+
+      {loading ? (
+        <div className="flex justify-center p-20">
+          <Loader2 className="w-8 h-8 animate-spin text-stone-900" />
+        </div>
+      ) : posts.length > 0 ? (
+        <div className="grid gap-4">
+          {posts.map((post) => (
+            <article
+              key={post.id}
+              className="rounded-[32px] border border-stone-100 bg-[#faf7f3] p-6"
+            >
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-[0.22em] text-stone-400">
+                    {post.category} • {post.readTime} • {formatDate(post.publishedAt)}
+                  </p>
+                  <h2 className="mt-3 font-display text-3xl text-stone-950">{post.title}</h2>
+                  <p className="mt-3 text-sm leading-7 text-stone-600">{post.excerpt}</p>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingPost(post);
+                      setShowForm(true);
+                    }}
+                    className="rounded-full border-stone-200 bg-white text-stone-700"
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleDelete(post.id)}
+                    className="rounded-full border-red-200 bg-white text-red-500"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-[32px] border border-dashed border-stone-300 bg-[#faf7f3] p-12 text-center text-sm text-stone-500">
+          No blog posts created yet.
+        </div>
+      )}
+    </AdminShell>
   );
 };
 
