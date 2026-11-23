@@ -76,3 +76,6 @@ prisma/dev.db-journal
 # =========================
 *.pem
 *.key
+
+.vercel
+.env*

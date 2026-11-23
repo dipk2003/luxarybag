@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import TrustBar from '@/components/TrustBar';
 import { Button } from '@/components/ui/button';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { CinematicScene } from "@/components/cinematic/Cinematic";
 
 const defaultInstagramImages = [
   'https://images.unsplash.com/photo-1594633313593-bab3825d0caf?w=600&q=80&auto=format&fit=crop',
@@ -133,6 +134,7 @@ const HomePage = () => {
             className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-600/50 to-transparent origin-left"
           />
 
+          <CinematicScene preset="luxe" />
           <div className="relative z-10 container mx-auto px-4 md:px-8 min-h-screen flex items-center">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center w-full py-24 lg:py-0">
               {/* Left: Editorial text content */}

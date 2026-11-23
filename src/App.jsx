@@ -39,10 +39,12 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import LeadCapturePopup from '@/components/LeadCapturePopup';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import MobileBottomBar from '@/components/MobileBottomBar';
+import CinematicRoute from "@/components/cinematic/CinematicRoute";
 
 function App() {
   return (
     <Router>
+        <CinematicRoute accent="#d4a017" />
       <AdminAuthProvider>
         <ModeProvider>
           <CartProvider>
