@@ -9,6 +9,7 @@ import TrustBar from '@/components/TrustBar';
 import { Button } from '@/components/ui/button';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { CinematicScene } from "@/components/cinematic/Cinematic";
+import CinematicStory from "@/components/cinematic/CinematicStory";
 
 const defaultInstagramImages = [
   'https://images.unsplash.com/photo-1594633313593-bab3825d0caf?w=600&q=80&auto=format&fit=crop',
@@ -304,6 +305,7 @@ const HomePage = () => {
           <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#0a0a0a] to-transparent z-10" />
         </section>
 
+        <CinematicStory world="bags" accent="#d4a017" label="Walk into the LuxeBag boutique" />
         <section className="py-16 bg-gradient-to-b from-[#0a0a0a] via-[#111] to-white">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
