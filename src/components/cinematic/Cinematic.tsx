@@ -10,10 +10,12 @@ export function CinematicScene({ preset = "silk", className = "" }) {
   useEffect(() => {
     let cleanup = () => {};
     let cancelled = false;
-    import("./cinematic3d").then(({ mountCinematicScene }) => {
+    // Start after the page is interactive so the 3D layer never delays first paint
+    const begin = () => import("./cinematic3d").then(({ mountCinematicScene }) => {
       if (!cancelled && ref.current) cleanup = mountCinematicScene(ref.current, preset);
     });
-    return () => { cancelled = true; cleanup(); };
+    const idle = window.requestIdleCallback ? window.requestIdleCallback(begin, { timeout: 2500 }) : window.setTimeout(begin, 1200);
+    return () => { cancelled = true; if (window.cancelIdleCallback) window.cancelIdleCallback(idle); else window.clearTimeout(idle); cleanup(); };
   }, [preset]);
   return <div ref={ref} aria-hidden="true" className={`pointer-events-none absolute inset-0 ${className}`} style={{ zIndex: 1 }} />;
 }

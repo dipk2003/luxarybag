@@ -6,35 +6,69 @@
 
 /* ------------------------------------------------------------------ helpers */
 function makeHelpers(THREE) {
-  const tex = (width, height, draw) => {
+  // Caches: identical textures, materials and geometries are built once (big win on load time)
+  const texCache = new Map();
+  const matCache = new Map();
+  const geoCache = new Map();
+  const tex = (width, height, draw, cacheKey) => {
+    if (cacheKey && texCache.has(cacheKey)) return texCache.get(cacheKey);
     const canvas = document.createElement("canvas");
     canvas.width = width; canvas.height = height;
     draw(canvas.getContext("2d"), width, height);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 4;
+    texture.anisotropy = 8;
+    if (cacheKey) texCache.set(cacheKey, texture);
     return texture;
   };
-  const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
-  const box = (w, h, d, material) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+  const std = (color, extra = {}) => {
+    const plain = Object.values(extra).every((v) => typeof v !== "object" || v === null || v.isColor);
+    const keyName = plain ? JSON.stringify([color, extra]) : null;
+    if (keyName && matCache.has(keyName)) return matCache.get(keyName);
+    const material = new THREE.MeshStandardMaterial({ color, roughness: 0.62, ...extra });
+    if (keyName) matCache.set(keyName, material);
+    return material;
+  };
+  // Boxes get softly rounded edges (real furniture never has razor edges)
+  const roundedGeometry = (w, h, d) => {
+    const r = Math.min(0.045, Math.min(w, h, d) * 0.22);
+    const keyName = [w, h, d].map((n) => n.toFixed(3)).join("x");
+    if (geoCache.has(keyName)) return geoCache.get(keyName);
+    const iw = Math.max(0.001, w - 2 * r); const ih = Math.max(0.001, h - 2 * r);
+    const shape = new THREE.Shape();
+    shape.moveTo(-iw / 2, -ih / 2); shape.lineTo(iw / 2, -ih / 2); shape.lineTo(iw / 2, ih / 2); shape.lineTo(-iw / 2, ih / 2); shape.lineTo(-iw / 2, -ih / 2);
+    const geometry = new THREE.ExtrudeGeometry(shape, { depth: Math.max(0.001, d - 2 * r), bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 3, curveSegments: 3 });
+    geometry.center();
+    geometry.computeVertexNormals();
+    geoCache.set(keyName, geometry);
+    return geometry;
+  };
+  const box = (w, h, d, material) => {
+    const flat = Array.isArray(material) || Math.min(w, h, d) < 0.05;
+    return new THREE.Mesh(flat ? new THREE.BoxGeometry(w, h, d) : roundedGeometry(w, h, d), material);
+  };
 
-  const planks = (base, line) => tex(512, 512, (c, w, h) => {
+  const planks = (base, line) => tex(1024, 1024, (c, w, h) => {
     c.fillStyle = base; c.fillRect(0, 0, w, h);
-    for (let y = 0; y < h; y += 64) {
-      c.fillStyle = `rgba(0,0,0,${0.05 + Math.random() * 0.08})`; c.fillRect(0, y, w, 64);
+    for (let y = 0; y < h; y += 128) {
+      c.fillStyle = `rgba(0,0,0,${0.04 + Math.random() * 0.08})`; c.fillRect(0, y, w, 128);
+      // wood grain
+      c.globalAlpha = 0.08; c.strokeStyle = line;
+      for (let g = 0; g < 14; g += 1) { c.beginPath(); const gy = y + 8 + g * 8 + Math.random() * 4; c.moveTo(0, gy); for (let x = 0; x <= w; x += 64) c.lineTo(x, gy + Math.sin(x / 90 + g) * 3); c.stroke(); }
+      c.globalAlpha = 1;
       c.fillStyle = line; c.fillRect(0, y, w, 3);
-      for (let x = (y / 64) % 2 ? 0 : 128; x < w; x += 256) c.fillRect(x, y, 3, 64);
+      for (let x = (y / 128) % 2 ? 0 : 256; x < w; x += 512) c.fillRect(x, y, 3, 128);
     }
-  });
+  }, `planks:${base}:${line}`);
   const tiles = (base, line, size = 64) => tex(512, 512, (c, w, h) => {
     c.fillStyle = base; c.fillRect(0, 0, w, h); c.strokeStyle = line; c.lineWidth = 3;
     for (let x = 0; x <= w; x += size) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
     for (let y = 0; y <= h; y += size) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
-  });
+  }, `tiles:${base}:${line}:${size}`);
   const sign = (text, { bg = "#1a1a1a", fg = "#f5d48a", font = "700 120px Georgia, serif", w = 1024, h = 256 } = {}) => tex(w, h, (c) => {
     c.fillStyle = bg; c.fillRect(0, 0, w, h);
     c.fillStyle = fg; c.font = font; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(text, w / 2, h / 2 + 6);
-  });
+  }, `sign:${text}:${bg}:${fg}:${font}`);
   // Woven fabric: base colour, zari border, butti motifs
   const css = (value) => (typeof value === "number" ? `#${value.toString(16).padStart(6, "0")}` : value);
   const fabric = (base, zari, motif = true) => tex(256, 512, (c, w, h) => {
@@ -45,7 +79,15 @@ function makeHelpers(THREE) {
     if (motif) for (let y = 40; y < h - 110; y += 46) for (let x = (y / 46) % 2 ? 22 : 44; x < w; x += 44) {
       c.beginPath(); c.arc(x, y, 5, 0, Math.PI * 2); c.fill();
     }
-  });
+  }, `fabric:${css(base)}:${css(zari)}:${motif}`);
+  // Silk: sheen + clearcoat so drapes catch light like real fabric
+  const silk = (map) => {
+    const keyName = `silk:${map.uuid}`;
+    if (matCache.has(keyName)) return matCache.get(keyName);
+    const material = new THREE.MeshPhysicalMaterial({ map, side: THREE.DoubleSide, roughness: 0.42, metalness: 0.05, sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color(0xffe3b0), clearcoat: 0.25, clearcoatRoughness: 0.5 });
+    matCache.set(keyName, material);
+    return material;
+  };
 
   // Interior shell: floor, three walls, ceiling. Returns group.
   const room = (scene, { w, d, h, floor, wall, ceiling = 0x1b1b1b, z = 0 }) => {
@@ -107,11 +149,11 @@ function makeHelpers(THREE) {
     const torso = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [0.17, 0], [0.2, 0.2], [0.16, 0.45], [0.22, 0.65], [0.14, 0.8], [0.05, 0.88], [0, 0.9]].map(([a, b]) => new THREE.Vector2(a, b)), 32), skin);
     torso.position.y = 1.1; group.add(torso);
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 24, 16), skin); head.scale.y = 1.2; head.position.y = 2.15; group.add(head);
-    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.42, 1.1, 40, 8, true), new THREE.MeshStandardMaterial({ map: drape, side: THREE.DoubleSide, roughness: 0.45, metalness: 0.15 }));
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.42, 1.1, 64, 12, true), silk(drape));
     skirt.position.y = 0.62; group.add(skirt);
-    const pallu = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 1.25, 4, 12), new THREE.MeshStandardMaterial({ map: drape, side: THREE.DoubleSide, roughness: 0.45, metalness: 0.15 }));
+    const pallu = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 1.25, 8, 16), silk(drape));
     pallu.position.set(0.12, 1.45, -0.12); pallu.rotation.set(0.15, 0.4, -0.35); group.add(pallu);
-    const blouse = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.28, 32), new THREE.MeshStandardMaterial({ map: drape, roughness: 0.45, metalness: 0.15 }));
+    const blouse = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.28, 48), silk(drape));
     blouse.position.y = 1.62; group.add(blouse);
     group.position.set(x, 0, z); group.rotation.y = rotY; scene.add(group);
     return group;
@@ -149,8 +191,8 @@ function makeHelpers(THREE) {
         const [base, zari] = palette[(i + level) % palette.length];
         const stack = box(0.42, 0.26, 0.48, [
           std(zari, { metalness: 0.6, roughness: 0.35 }), std(zari, { metalness: 0.6, roughness: 0.35 }),
-          new THREE.MeshStandardMaterial({ map: fabric(base, zari), roughness: 0.5 }), std(base),
-          new THREE.MeshStandardMaterial({ map: fabric(base, zari), roughness: 0.5 }), std(base),
+          silk(fabric(base, zari)), std(base, { roughness: 0.45 }),
+          silk(fabric(base, zari)), std(base, { roughness: 0.45 }),
         ]);
         stack.position.set(-1.2 + i * 0.48, 0.52 + level * 0.62, 0.02); group.add(stack);
       }
@@ -171,7 +213,7 @@ function makeHelpers(THREE) {
     return group;
   };
 
-  return { tex, std, box, planks, tiles, sign, fabric, room, facade, glowBulb, chandelier, mannequin, rail, shelves, dumbbell, garment };
+  return { tex, std, box, silk, planks, tiles, sign, fabric, room, facade, glowBulb, chandelier, mannequin, rail, shelves, dumbbell, garment };
 }
 
 /* ------------------------------------------------------------------ worlds */
@@ -704,75 +746,20 @@ Object.assign(DEFAULT_CAPTIONS, {
 export function mountStory(THREE, section, world = "saree", options = {}) {
   if (!section || !WORLDS[world]) return () => {};
   const captions = options.captions || DEFAULT_CAPTIONS[world] || [];
-  const accent = options.accent || "#d4a640";
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Layout: tall section with a sticky stage
+  // Layout first (cheap); the 3D world is only built when the section approaches the viewport.
   section.style.position = "relative";
   section.style.height = `${Math.max(3, captions.length) * 100}vh`;
   section.setAttribute("aria-label", options.label || "Walk-through");
   const stage = document.createElement("div");
   // Pinned with JS (not CSS sticky) so it also works inside overflow-hidden page wrappers
-  stage.style.cssText = "position:absolute;top:0;left:0;height:100vh;width:100%;overflow:hidden;";
+  stage.style.cssText = "position:absolute;top:0;left:0;height:100vh;width:100%;overflow:hidden;background:#050505;";
+  stage.dataset.cineStory = "true";
   section.appendChild(stage);
 
-  let renderer;
-  try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-  } catch {
-    section.style.height = "auto";
-    return () => stage.remove();
-  }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.25;
-  renderer.domElement.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block";
-  stage.appendChild(renderer.domElement);
-
-  // Captions (inherit the site's fonts)
-  const overlay = document.createElement("div");
-  overlay.style.cssText = "position:absolute;inset:0;pointer-events:none;display:flex;align-items:flex-end;padding:0 max(24px,6vw) 12vh;background:linear-gradient(0deg,rgba(0,0,0,.65),transparent 45%);";
-  stage.appendChild(overlay);
-  const captionEls = captions.map(([title, text], index) => {
-    const el = document.createElement("div");
-    el.style.cssText = "position:absolute;left:max(24px,6vw);bottom:12vh;max-width:620px;color:#fff;opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .8s cubic-bezier(.2,.7,.1,1);font-family:inherit;";
-    el.innerHTML = `<div style="font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:${accent};margin-bottom:14px">Scene ${String(index + 1).padStart(2, "0")} / ${String(captions.length).padStart(2, "0")}</div><h2 style="margin:0 0 12px;font-size:clamp(34px,5vw,68px);line-height:1.02;font-family:inherit;color:#fff">${title}</h2><p style="margin:0;font-size:clamp(15px,1.5vw,19px);line-height:1.6;color:rgba(255,255,255,.82)">${text}</p>`;
-    overlay.appendChild(el);
-    return el;
-  });
-  const dots = document.createElement("div");
-  dots.style.cssText = "position:absolute;right:max(20px,3vw);top:50%;transform:translateY(-50%);display:grid;gap:10px;";
-  const dotEls = captions.map(() => { const d = document.createElement("i"); d.style.cssText = `display:block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.35);transition:all .4s`; dots.appendChild(d); return d; });
-  stage.appendChild(dots);
-
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 80);
-  const built = WORLDS[world](THREE, scene, makeHelpers(THREE));
-  // Worlds are authored with soft values; boost to physically based light units
-  const boost = options.lightBoost || 7;
-  scene.traverse((object) => {
-    if (object.isPointLight) { object.intensity *= boost; object.distance *= 1.7; }
-    if (object.isHemisphereLight) object.intensity *= 1.8;
-  });
-  scene.add(new THREE.AmbientLight(0xffffff, options.ambient ?? 0.35));
-  const pathPos = new THREE.CatmullRomCurve3(built.keys.map((k) => new THREE.Vector3(...k.pos)));
-  const pathLook = new THREE.CatmullRomCurve3(built.keys.map((k) => new THREE.Vector3(...k.look)));
-  const lookTarget = new THREE.Vector3();
-
-  const resize = () => {
-    window.dispatchEvent(new Event("scroll"));
-    const width = stage.clientWidth; const height = stage.clientHeight;
-    renderer.setSize(width, height, false);
-    camera.aspect = width / height;
-    camera.fov = width < 700 ? 70 : 55;
-    camera.updateProjectionMatrix();
-  };
-  resize();
-  window.addEventListener("resize", resize);
-
-  let progress = 0; let smooth = 0; let active = -1;
   let pinState = "";
+  let progress = 0;
   const onScroll = () => {
     const rect = section.getBoundingClientRect();
     const total = rect.height - window.innerHeight;
@@ -788,48 +775,189 @@ export function mountStory(THREE, section, world = "saree", options = {}) {
   window.addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
-  const pointer = { x: 0, y: 0 };
-  const onPointer = (event) => { pointer.x = (event.clientX / window.innerWidth - 0.5); pointer.y = (event.clientY / window.innerHeight - 0.5); };
-  window.addEventListener("pointermove", onPointer, { passive: true });
+  let teardown = () => {};
+  let started = false;
+  const lazy = new IntersectionObserver(([entry]) => {
+    if (!entry.isIntersecting || started) return;
+    started = true;
+    lazy.disconnect();
+    teardown = start();
+  }, { rootMargin: "120% 0px" });
+  lazy.observe(section);
 
-  let visible = false;
-  const io = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; });
-  io.observe(section);
-
-  const clock = new THREE.Clock();
-  let frameId = 0;
-  const frame = () => {
-    frameId = requestAnimationFrame(frame);
-    if (!visible) return;
-    smooth += (progress - smooth) * (reduce ? 1 : 0.08);
-    const t = clock.getElapsedTime();
-    camera.position.copy(pathPos.getPoint(smooth));
-    lookTarget.copy(pathLook.getPoint(smooth));
-    lookTarget.x += pointer.x * 0.8; lookTarget.y -= pointer.y * 0.4;
-    camera.position.y += reduce ? 0 : Math.sin(t * 1.6) * 0.015; // gentle walking sway
-    camera.lookAt(lookTarget);
-    built.update?.(t, smooth);
-    const index = Math.min(captions.length - 1, Math.round(smooth * (captions.length - 1)));
-    if (index !== active) {
-      captionEls.forEach((el, i) => { el.style.opacity = i === index ? "1" : "0"; el.style.transform = i === index ? "none" : "translateY(30px)"; });
-      dotEls.forEach((d, i) => { d.style.background = i === index ? accent : "rgba(255,255,255,.35)"; d.style.transform = i === index ? "scale(1.6)" : "none"; });
-      active = index;
+  function start() {
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    } catch {
+      section.style.height = "auto";
+      return () => {};
     }
-    renderer.render(scene, camera);
-  };
-  frame();
+    let pixelRatio = Math.min(window.devicePixelRatio, 1.5);
+    renderer.setPixelRatio(pixelRatio);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity 1.2s ease";
+    stage.appendChild(renderer.domElement);
+
+    // Cinematic finish: letterbox bars, vignette, fine grain
+    const finish = document.createElement("div");
+    finish.style.cssText = "position:absolute;inset:0;pointer-events:none;"
+      + "background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.55) 100%),linear-gradient(0deg,rgba(0,0,0,.6),transparent 38%);";
+    stage.appendChild(finish);
+    const grain = document.createElement("div");
+    grain.style.cssText = "position:absolute;inset:0;pointer-events:none;opacity:.06;mix-blend-mode:overlay;background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\");";
+    stage.appendChild(grain);
+    ["top", "bottom"].forEach((side) => {
+      const bar = document.createElement("div");
+      bar.style.cssText = `position:absolute;left:0;right:0;${side}:0;height:5.5vh;background:#000;pointer-events:none;`;
+      stage.appendChild(bar);
+    });
+
+    // Captions: a short title and one line, in the site's own fonts
+    const captionEls = captions.map(([title, text]) => {
+      const el = document.createElement("div");
+      el.style.cssText = "position:absolute;left:max(24px,6vw);bottom:calc(5.5vh + 7vh);max-width:560px;color:#fff;opacity:0;transform:translateY(24px);filter:blur(6px);transition:opacity .9s ease,transform 1.1s cubic-bezier(.2,.7,.1,1),filter .9s ease;font-family:inherit;pointer-events:none;";
+      el.innerHTML = `<h2 style="margin:0 0 10px;font-size:clamp(30px,4.2vw,56px);line-height:1.05;font-family:inherit;font-weight:inherit;color:#fff;letter-spacing:-.01em">${title}</h2><p style="margin:0;font-size:clamp(14px,1.3vw,17px);line-height:1.6;color:rgba(255,255,255,.78)">${text}</p>`;
+      stage.appendChild(el);
+      return el;
+    });
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 90);
+    const helpers = makeHelpers(THREE);
+    const built = WORLDS[world](THREE, scene, helpers);
+
+    // Image-based lighting: a soft studio environment for realistic reflections on gold, glass and polish
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    const bgColor = scene.background instanceof THREE.Color ? scene.background : new THREE.Color(0x222222);
+    const bright = bgColor.r + bgColor.g + bgColor.b > 1.2;
+    envScene.add(new THREE.Mesh(new THREE.BoxGeometry(30, 14, 30), new THREE.MeshBasicMaterial({ color: bright ? 0xbfbab2 : 0x2b2622, side: THREE.BackSide })));
+    [[0, 6.9, 0, 18, 6, 0xfff3e2, -Math.PI / 2], [-14.9, 3, 0, 10, 4, 0xffe2bd, Math.PI / 2], [14.9, 3, -4, 8, 4, 0xdfe8ff, -Math.PI / 2], [0, 3, -14.9, 12, 4, 0xfff1dc, 0]].forEach(([x, y, z, w, hgt, color, rot]) => {
+      const panel = new THREE.Mesh(new THREE.PlaneGeometry(w, hgt), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
+      panel.position.set(x, y, z);
+      if (y > 6) panel.rotation.x = rot; else panel.rotation.y = rot;
+      envScene.add(panel);
+    });
+    scene.environment = pmrem.fromScene(envScene, 0.035).texture;
+    pmrem.dispose();
+
+    // Lights: world lights rescaled to physical units, plus a soft shadow-casting key that follows the camera
+    const boost = options.lightBoost || 4.5;
+    scene.traverse((object) => {
+      if (object.isPointLight) { object.intensity *= boost; object.distance *= 1.6; }
+      if (object.isHemisphereLight) object.intensity *= 1.2;
+      if (object.isMesh) {
+        const planar = object.geometry?.type === "PlaneGeometry" || object.geometry?.type === "CircleGeometry";
+        object.castShadow = !planar;
+        object.receiveShadow = true;
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        materials.forEach((m) => { if (m && "envMapIntensity" in m) m.envMapIntensity = m.metalness > 0.5 ? 1.2 : 0.55; });
+      }
+    });
+    scene.add(new THREE.AmbientLight(0xffffff, options.ambient ?? 0.15));
+    const key = new THREE.DirectionalLight(0xfff2e0, bright ? 1.6 : 1.1);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 0.5, far: 40 });
+    key.shadow.bias = -0.0004;
+    key.shadow.normalBias = 0.02;
+    key.shadow.radius = 4;
+    scene.add(key, key.target);
+
+    const pathPos = new THREE.CatmullRomCurve3(built.keys.map((k) => new THREE.Vector3(...k.pos)), false, "centripetal");
+    const pathLook = new THREE.CatmullRomCurve3(built.keys.map((k) => new THREE.Vector3(...k.look)), false, "centripetal");
+    const lookTarget = new THREE.Vector3();
+    const smoothLook = new THREE.Vector3().copy(pathLook.getPoint(0));
+
+    const resize = () => {
+      window.dispatchEvent(new Event("scroll"));
+      const width = stage.clientWidth; const height = stage.clientHeight;
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.fov = width < 700 ? 64 : 50;
+      camera.updateProjectionMatrix();
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const pointer = { x: 0, y: 0, sx: 0, sy: 0 };
+    const onPointer = (event) => { pointer.x = (event.clientX / window.innerWidth - 0.5); pointer.y = (event.clientY / window.innerHeight - 0.5); };
+    window.addEventListener("pointermove", onPointer, { passive: true });
+
+    let visible = true;
+    const io = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; });
+    io.observe(section);
+
+    let smooth = progress; let active = -1; let last = performance.now(); let elapsed = 0;
+    let frames = 0; let slowTime = 0; let firstFrame = true;
+    let frameId = 0;
+    const frame = (now) => {
+      frameId = requestAnimationFrame(frame);
+      if (!visible) { last = now; return; }
+      const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
+      last = now;
+      elapsed += dt;
+      // Frame-rate independent easing: glides like a camera dolly
+      smooth += (progress - smooth) * (reduce ? 1 : 1 - Math.exp(-dt * 3.2));
+      pointer.sx += (pointer.x - pointer.sx) * (1 - Math.exp(-dt * 2.5));
+      pointer.sy += (pointer.y - pointer.sy) * (1 - Math.exp(-dt * 2.5));
+      camera.position.copy(pathPos.getPoint(smooth));
+      lookTarget.copy(pathLook.getPoint(smooth));
+      lookTarget.x += pointer.sx * 0.7; lookTarget.y -= pointer.sy * 0.35;
+      smoothLook.lerp(lookTarget, 1 - Math.exp(-dt * 5));
+      camera.lookAt(smoothLook);
+      key.position.set(camera.position.x + 4, 9, camera.position.z + 3);
+      key.target.position.set(smoothLook.x, 0, smoothLook.z);
+      built.update?.(elapsed, smooth);
+
+      const index = Math.min(captions.length - 1, Math.round(smooth * (captions.length - 1)));
+      if (index !== active) {
+        captionEls.forEach((el, i) => {
+          const on = i === index;
+          el.style.opacity = on ? "1" : "0";
+          el.style.transform = on ? "none" : "translateY(24px)";
+          el.style.filter = on ? "none" : "blur(6px)";
+        });
+        active = index;
+      }
+      renderer.render(scene, camera);
+      if (firstFrame) { renderer.domElement.style.opacity = "1"; firstFrame = false; }
+
+      // Adaptive resolution: keep motion smooth on slower devices
+      frames += 1; slowTime += dt;
+      if (frames === 90) {
+        const avg = slowTime / frames;
+        if (avg > 0.024 && pixelRatio > 1) { pixelRatio = 1; renderer.setPixelRatio(1); resize(); }
+        else if (avg > 0.034 && pixelRatio > 0.75) { pixelRatio = 0.75; renderer.setPixelRatio(0.75); renderer.shadowMap.enabled = false; resize(); }
+        frames = 0; slowTime = 0;
+      }
+    };
+    frameId = requestAnimationFrame(frame);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("pointermove", onPointer);
+      io.disconnect();
+      scene.environment?.dispose?.();
+      scene.traverse((object) => {
+        object.geometry?.dispose?.();
+        (Array.isArray(object.material) ? object.material : object.material ? [object.material] : []).forEach((m) => { m.map?.dispose?.(); m.dispose?.(); });
+      });
+      renderer.dispose();
+      renderer.domElement.remove();
+    };
+  }
 
   return () => {
-    cancelAnimationFrame(frameId);
-    window.removeEventListener("resize", resize);
+    lazy.disconnect();
     window.removeEventListener("scroll", onScroll);
-    window.removeEventListener("pointermove", onPointer);
-    io.disconnect();
-    scene.traverse((object) => {
-      object.geometry?.dispose?.();
-      (Array.isArray(object.material) ? object.material : object.material ? [object.material] : []).forEach((m) => { m.map?.dispose?.(); m.dispose?.(); });
-    });
-    renderer.dispose();
+    teardown();
     stage.remove();
     section.style.height = "";
   };

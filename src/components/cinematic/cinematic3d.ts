@@ -348,7 +348,7 @@ export function mountCinematicMotion({ accent = "#c9a227", root = document.body 
     sections.forEach((section) => {
       section.querySelectorAll(":scope img, :scope video").forEach((media) => {
         const frame = media.parentElement;
-        if (!frame || seen.has(frame) || frame.closest(".cine-letterbox")) return;
+        if (!frame || seen.has(frame) || frame.closest(".cine-letterbox") || frame.closest("[data-cine-story]")) return;
         if (frame.getBoundingClientRect().height < 120) return;
         seen.add(frame);
         frame.classList.add("cine-letterbox");
@@ -357,7 +357,7 @@ export function mountCinematicMotion({ accent = "#c9a227", root = document.body 
       const blocks = section.querySelectorAll(":scope h2, :scope h3, :scope p, :scope article");
       let delay = 0;
       blocks.forEach((block) => {
-        if (seen.has(block) || block.closest(".cine-reveal") || block.closest("header, nav, footer, [role=dialog]")) return;
+        if (seen.has(block) || block.closest(".cine-reveal") || block.closest("header, nav, footer, [role=dialog], [data-cine-story]")) return;
         // Never fight existing transforms/animations (Tailwind translate, framer-motion inline styles)
         if (getComputedStyle(block).transform !== "none" || /transform|opacity/.test(block.getAttribute("style") || "")) { seen.add(block); return; }
         seen.add(block);
