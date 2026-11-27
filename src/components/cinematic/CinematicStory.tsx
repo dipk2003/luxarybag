@@ -1,24 +1,4 @@
 // @ts-nocheck
-/* Scroll-driven 3D walkthrough section ("step inside the store"). three.js and the story engine
-   are downloaded only when the visitor scrolls near the section, so the page itself loads fast. */
-import { useEffect, useRef } from "react";
-
-export default function CinematicStory({ world, accent = "#d4a640", label = "3D walkthrough", scenes = 6 }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return undefined;
-    let cleanup = () => {};
-    let cancelled = false;
-    const near = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      near.disconnect();
-      Promise.all([import("three"), import("./story-engine")]).then(([THREE, engine]) => {
-        if (!cancelled && ref.current) cleanup = engine.mountStory(THREE, ref.current, world, { accent, label });
-      });
-    }, { rootMargin: "60% 0px" });
-    near.observe(node);
-    return () => { cancelled = true; near.disconnect(); cleanup(); };
-  }, [world, accent, label]);
-  return <section ref={ref} aria-label={label} style={{ position: "relative", background: "#050505", height: `${scenes * 100}vh` }} />;
-}
+'use client';
+import {useEffect,useRef} from 'react';
+export default function CinematicStory({world,label='Explore the space'}){const ref=useRef(null);useEffect(()=>{let cancelled=false,handle;const observer=new IntersectionObserver(([entry])=>{if(!entry.isIntersecting)return;observer.disconnect();if(!document.getElementById('brand-world-css')){const css=document.createElement('link');css.id='brand-world-css';css.rel='stylesheet';css.href='/_scene/world.css';document.head.appendChild(css);}const url='/_scene/brand-world.js';import(/* webpackIgnore: true */ /* @vite-ignore */ url).then(({mountWorld})=>{if(!cancelled&&ref.current)handle=mountWorld(ref.current,world);});},{rootMargin:'200px'});observer.observe(ref.current);return()=>{cancelled=true;observer.disconnect();handle?.dispose();};},[world]);return <section ref={ref} aria-label={label} style={{position:'relative',minHeight:'100svh',background:'#d8d1c5'}}/>;}

@@ -1,0 +1,7 @@
+Human characters adapted from Microsoft Rocketbox (Microsoft Corporation, MIT), converted and animated by Rohit Biradar / Avatar Studio (MIT). Sources: https://github.com/microsoft/Microsoft-Rocketbox and https://github.com/memoriesrohit/avatar-studio . Adaptations: original outfits, idle animation, removed unused facial morphs, 512px WebP textures 16-bit geometry quantization and gzip transport. Fictional demo characters; no affiliation with the template businesses. MIT notices are included.
+
+Glam Velvet Sofa: © 2021 Wayfair, LLC / Eric Chadwick, CC BY 4.0. Source: https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/GlamVelvetSofa . Adaptations: removed sample cameras/lights, 512px WebP textures, 16-bit geometry quantization and gzip transport and scene placement. Full licence and original model documentation included.
+
+Sheen Chair: © 2020 Wayfair, LLC / Eric Chadwick, CC0. Source: https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SheenChair . Adaptations: removed sample cameras/lights, 512px WebP textures, 16-bit geometry quantization and gzip transport and scene placement.
+
+Potted plant: Poly Haven, CC0. Source: https://polyhaven.com/a/potted_plant_01 . Adaptations: mesh simplification, 512px WebP textures 16-bit geometry quantization and gzip transport. Surface maps: https://polyhaven.com/a/wood_floor_deck and https://polyhaven.com/a/concrete_wall_001 (CC0). Wood diffuse was colour graded for a neutral interior palette.

@@ -1,35 +1,6 @@
 // @ts-nocheck
-/* Cinematic layer components. CinematicScene sits inside a hero (absolute, behind the text);
-   CinematicMotion adds scroll reveals + progress bar to public pages. three.js loads lazily. */
-import { useEffect, useRef } from "react";
-
-const SKIP_MOTION = /^\/(admin|super-admin|dashboard|account|login|signup|auth|checkout)/;
-
-export function CinematicScene({ preset = "silk", className = "" }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    let cleanup = () => {};
-    let cancelled = false;
-    // Start after the page is interactive so the 3D layer never delays first paint
-    const begin = () => import("./cinematic3d").then(({ mountCinematicScene }) => {
-      if (!cancelled && ref.current) cleanup = mountCinematicScene(ref.current, preset);
-    });
-    const idle = window.requestIdleCallback ? window.requestIdleCallback(begin, { timeout: 2500 }) : window.setTimeout(begin, 1200);
-    return () => { cancelled = true; if (window.cancelIdleCallback) window.cancelIdleCallback(idle); else window.clearTimeout(idle); cleanup(); };
-  }, [preset]);
-  return <div ref={ref} aria-hidden="true" className={`pointer-events-none absolute inset-0 ${className}`} style={{ zIndex: 1 }} />;
-}
-
-export function CinematicMotion({ accent = "#c9a227", path = "" }) {
-  useEffect(() => {
-    const current = path || (typeof window !== "undefined" ? window.location.pathname : "/");
-    if (SKIP_MOTION.test(current)) return undefined;
-    let cleanup = () => {};
-    let cancelled = false;
-    import("./cinematic3d").then(({ mountCinematicMotion }) => {
-      if (!cancelled) cleanup = mountCinematicMotion({ accent });
-    });
-    return () => { cancelled = true; cleanup(); };
-  }, [accent, path]);
-  return null;
-}
+'use client';
+import {useEffect,useRef} from 'react';
+function loadWorld(){if(!document.getElementById('brand-world-css')){const link=document.createElement('link');link.id='brand-world-css';link.rel='stylesheet';link.href='/_scene/world.css';document.head.appendChild(link);}const url='/_scene/brand-world.js';return import(/* webpackIgnore: true */ /* @vite-ignore */ url);}
+export function CinematicScene({preset='silk',className=''}){const ref=useRef(null);useEffect(()=>{let handle,cancelled=false;const observer=new IntersectionObserver(([entry])=>{if(!entry.isIntersecting)return;observer.disconnect();loadWorld().then(({mountWorld})=>{if(!cancelled&&ref.current)handle=mountWorld(ref.current,preset,{hero:true});});},{rootMargin:'100px'});if(ref.current)observer.observe(ref.current);return()=>{cancelled=true;observer.disconnect();handle?.dispose();};},[preset]);return <div ref={ref} className={'brand-hero-surface pointer-events-none '+className} style={{position:'absolute',inset:0,zIndex:1,minHeight:0,borderRadius:0}}/>;}
+export function CinematicMotion(){return null;}

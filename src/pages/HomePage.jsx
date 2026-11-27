@@ -474,12 +474,12 @@ const HomePage = () => {
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, x: 50 }}
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl border border-gray-100 relative"
               >
-                <div className="absolute -top-6 -right-6 bg-yellow-500 text-white p-4 rounded-xl shadow-lg transform rotate-6">
+                <div className="absolute top-4 right-4 bg-yellow-500 text-white p-4 rounded-xl shadow-lg transform rotate-6">
                   <Star className="w-8 h-8 fill-white" />
                 </div>
 
